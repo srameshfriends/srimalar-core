@@ -1,4 +1,4 @@
-package dcapture.data.core.htwo;
+package dcapture.data.htwo;
 
 import dcapture.data.core.*;
 import org.apache.commons.lang3.SerializationUtils;
