@@ -103,7 +103,7 @@ public class H2SelectBuilder implements SqlSelectBuilder {
     @Override
     public H2SelectBuilder groupBy(String... columns) {
         for (String col : columns) {
-            getOrderByColumns().add(col);
+            getGroupByColumns().add(col);
         }
         return H2SelectBuilder.this;
     }
@@ -240,6 +240,13 @@ public class H2SelectBuilder implements SqlSelectBuilder {
             orderByColumns = new ArrayList<>();
         }
         return orderByColumns;
+    }
+
+    private List<String> getGroupByColumns() {
+        if (groupByColumns == null) {
+            groupByColumns = new ArrayList<>();
+        }
+        return groupByColumns;
     }
 
     private WhereQuery getWhereQuery() {
