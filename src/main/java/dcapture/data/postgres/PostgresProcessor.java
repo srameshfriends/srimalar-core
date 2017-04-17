@@ -1,7 +1,8 @@
-package dcapture.data.htwo;
+package dcapture.data.postgres;
 
 import dcapture.data.core.*;
-import org.h2.jdbcx.JdbcConnectionPool;
+import dcapture.data.htwo.H2SelectBuilder;
+import org.postgresql.ds.PGConnectionPoolDataSource;
 
 import javax.persistence.TemporalType;
 import java.io.File;
@@ -14,24 +15,24 @@ import java.util.List;
 /**
  * H2 Processor
  */
-public final class H2Processor extends SqlFactory {
-    private JdbcConnectionPool connectionPool;
-    private H2Reader reader;
-    private H2Transaction transaction;
+public final class PostgresProcessor extends SqlFactory {
+    private PGConnectionPoolDataSource connectionPool;
+    private PostgresReader reader;
+    private PostgresTransaction transaction;
 
-    public void initialize(File persistenceFile, JdbcConnectionPool pool, String schema) {
+    public void initialize(File persistenceFile, PGConnectionPoolDataSource pool, String schema) {
         initialize(schema, persistenceFile);
         this.connectionPool = pool;
-        reader = new H2Reader(this);
-        transaction = new H2Transaction(this);
+        reader = new PostgresReader(this);
+        transaction = new PostgresTransaction(this);
     }
 
-    JdbcConnectionPool getConnectionPool() throws SQLException {
+    PGConnectionPoolDataSource getConnectionPool() throws SQLException {
         return connectionPool;
     }
 
     public SqlModifyBuilder createQueryBuilder() {
-        return new H2ModifyBuilder(this);
+        return new PostgresModifyBuilder(this);
     }
 
     @Override
@@ -68,7 +69,9 @@ public final class H2Processor extends SqlFactory {
     @Override
     public SqlQuery createSchemaQuery() {
         SqlQuery query = new SqlQuery();
-        query.setQuery("create schema if not exists " + getSchema() + ";");
+        String builder = "create schema if not exists ".concat(getSchema()).concat(" authorization ")
+                .concat(connectionPool.getUser()).concat(";");
+        query.setQuery(builder);
         return query;
     }
 
@@ -108,8 +111,7 @@ public final class H2Processor extends SqlFactory {
         List<SqlColumn> columnList = sqlTable.getColumnListWithoutPK();
         StringBuilder builder = new StringBuilder("create table if not exists ");
         builder.append(getSchema()).append('.').append(table).append("(");
-        builder.append(primaryColumn.getName()).append(" ").append(getDataType(primaryColumn))
-                .append(" primary key auto_increment, ");
+        builder.append(primaryColumn.getName()).append(" serial primary key, ");
         for (SqlColumn column : columnList) {
             builder.append(column.getName()).append(" ").append(getDataType(column)).append(", ");
         }
@@ -156,14 +158,12 @@ public final class H2Processor extends SqlFactory {
                 return "timestamp";
             }
             return "date";
-        } else if (BigDecimal.class.equals(type)) {
+        } else if (BigDecimal.class.equals(type) || Double.class.equals(type) || double.class.equals(type)) {
             return "decimal";
         } else if (int.class.equals(type)) {
             return "integer";
         } else if (boolean.class.equals(type)) {
             return "boolean";
-        } else if (double.class.equals(type)) {
-            return "double";
         } else if (Enum.class.isAssignableFrom(type)) {
             return "varchar(" + getEnumLength() + ")";
         } else if (long.class.equals(type)) {
@@ -176,8 +176,6 @@ public final class H2Processor extends SqlFactory {
             return "integer";
         } else if (Boolean.class.equals(type)) {
             return "boolean";
-        } else if (Double.class.equals(type)) {
-            return "double";
         } else if (Long.class.equals(type)) {
             return "bigint";
         }

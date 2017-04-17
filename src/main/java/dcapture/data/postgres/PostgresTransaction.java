@@ -1,7 +1,8 @@
-package dcapture.data.htwo;
+package dcapture.data.postgres;
 
 import dcapture.data.core.*;
 import jodd.bean.BeanUtilBean;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
@@ -10,17 +11,17 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * H2 Transaction
+ * Postgres Transaction
  */
-public class H2Transaction extends AbstractTransaction implements SqlTransaction {
-    private static final Logger logger = Logger.getLogger(H2Transaction.class);
-    private final H2Processor processor;
+public class PostgresTransaction extends AbstractTransaction implements SqlTransaction {
+    private static final org.apache.log4j.Logger logger = Logger.getLogger(PostgresTransaction.class);
+    private final PostgresProcessor processor;
 
-    H2Transaction(H2Processor processor) {
+    PostgresTransaction(PostgresProcessor processor) {
         this.processor = processor;
     }
 
-    private H2Processor getProcessor() {
+    private PostgresProcessor getProcessor() {
         return processor;
     }
 
@@ -91,7 +92,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
     @Override
     public SqlQuery insertQuery(Object object) {
         SqlTable table = getProcessor().getSqlTable(object.getClass());
-        H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
+        PostgresModifyBuilder builder = new PostgresModifyBuilder(getProcessor());
         builder.insertInto(table.getName());
         for (SqlColumn sqlColumn : table.getSqlColumnList()) {
             if (!sqlColumn.isPrimaryKey()) {
@@ -105,7 +106,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
     @Override
     public SqlQuery updateQuery(Object object) {
         SqlTable table = getProcessor().getSqlTable(object.getClass());
-        H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
+        PostgresModifyBuilder builder = new PostgresModifyBuilder(getProcessor());
         builder.update(table.getName());
         for (SqlColumn sqlColumn : table.getColumnListWithoutPK()) {
             Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
@@ -121,7 +122,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
     @Override
     public SqlQuery deleteQuery(Object object) {
         SqlTable table = getProcessor().getSqlTable(object.getClass());
-        H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
+        PostgresModifyBuilder builder = new PostgresModifyBuilder(getProcessor());
         builder.deleteFrom(table.getName());
         SqlColumn sqlColumn = table.getPrimaryColumn();
         Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
@@ -176,7 +177,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
 
     private void rollback(Connection connection) {
         try {
-            if (connection == null) {
+            if(connection == null) {
                 logger.info("Connection should not be null");
             } else {
                 logger.info("Connection is not a problem");

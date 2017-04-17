@@ -1,6 +1,7 @@
-package dcapture.data.htwo;
+package dcapture.data.postgres;
 
 import dcapture.data.core.*;
+import dcapture.data.htwo.H2SelectBuilder;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.log4j.Logger;
 
@@ -12,13 +13,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * H2 Reader
+ * Sql Reader
  */
-public class H2Reader implements SqlReader {
-    private static final Logger logger = Logger.getLogger(H2Reader.class);
-    private final H2Processor processor;
+public class PostgresReader implements SqlReader {
+    private static final Logger logger = Logger.getLogger(PostgresReader.class);
+    private final PostgresProcessor processor;
 
-    H2Reader(H2Processor processor) {
+    PostgresReader(PostgresProcessor processor) {
         this.processor = processor;
     }
 

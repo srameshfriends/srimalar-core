@@ -3,8 +3,10 @@ package dcapture.data.dev;
 import dcapture.data.core.SqlEnhancer;
 import dcapture.data.core.SqlProcessor;
 import dcapture.data.htwo.H2Processor;
+import dcapture.data.postgres.PostgresProcessor;
 import org.h2.jdbcx.JdbcConnectionPool;
 import org.h2.tools.Server;
+import org.postgresql.ds.PGConnectionPoolDataSource;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -19,7 +21,7 @@ import java.util.logging.Logger;
 class DevUtil {
     private static final Logger logger = Logger.getLogger(DevUtil.class.getName());
     private static Server h2TcpServer, h2WebServer;
-    static final String H2Driver = "org.h2.Driver";
+    static final String H2_DRIVER = "org.h2.Driver", POSTGRES_DRIVER = "org.postgresql.Driver";
 
     static String getClassPathLocation(String pathValue) {
         pathValue = pathValue == null ? "" : pathValue.trim();
@@ -40,15 +42,21 @@ class DevUtil {
     }
 
     static SqlProcessor create(File persistenceFile, String driverName, String url, String schema,
-                                           String user, String password) throws SQLException {
-        if (H2Driver.equals(driverName)) {
+                               String user, String password) throws SQLException {
+        if (H2_DRIVER.equals(driverName)) {
             JdbcConnectionPool connectionPool = JdbcConnectionPool.create(url, user, password);
-            H2Processor processor = new H2Processor();
-            processor.initialize(schema, persistenceFile, connectionPool);
-            return processor;
-        } else {
-            throw new SQLException(driverName + " database driver is not supported");
+            H2Processor h2Processor = new H2Processor();
+            h2Processor.initialize(persistenceFile, connectionPool, schema);
+            return h2Processor;
         }
+        PGConnectionPoolDataSource pool = new PGConnectionPoolDataSource();
+        pool.setUrl(url);
+        pool.setUser(user);
+        pool.setPassword(password);
+        pool.setDefaultAutoCommit(false);
+        PostgresProcessor postgresProcessor = new PostgresProcessor();
+        postgresProcessor.initialize(persistenceFile, pool, schema);
+        return postgresProcessor;
     }
 
     static void writeSqlEnhancer(File file, String[] packageArray) {
@@ -115,7 +123,7 @@ public class Main {
         logger.info(" H2 Tcp server is running : " + DevUtil.isH2TcpDatabaseRunning());
         logger.info(" H2 Web server is running : " + DevUtil.isH2WebDatabaseRunning());
         //
-        SqlProcessor sqlProcessor = DevUtil.create(file, DevUtil.H2Driver, URL, SCHEMA, USER, PASS);
+        SqlProcessor sqlProcessor = DevUtil.create(file, DevUtil.H2_DRIVER, URL, SCHEMA, USER, PASS);
         Main main = new Main(sqlProcessor);
         main.runForwardTool();
     }

@@ -14,12 +14,34 @@
         <reflections>0.9.10</reflections>
         <persistence>2.1.1</persistence>
         <jodd-bean>3.8.5</jodd-bean>
+        <log4j>1.2.17</log4j>
+        <slf4j-log4j12>1.7.9</slf4j-log4j12>
+        <commons-logging>1.2</commons-logging>
         <commons-lang3>3.5</commons-lang3>
         <gson>2.8.0</gson>
         <h2>1.4.193</h2>
+        <postgresql>42.0.0</postgresql>
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j-log4j12}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>${commons-logging}</version>
+        </dependency>
 
         <dependency>
             <groupId>org.reflections</groupId>
@@ -55,6 +77,12 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>${h2}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql}</version>
         </dependency>
 
     </dependencies>
