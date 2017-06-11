@@ -1,7 +1,6 @@
 package dcapture.data.core;
 
 import java.util.LinkedList;
-import java.util.List;
 
 /**
  * SqlQuery

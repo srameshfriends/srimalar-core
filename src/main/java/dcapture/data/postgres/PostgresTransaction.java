@@ -2,7 +2,6 @@ package dcapture.data.postgres;
 
 import dcapture.data.core.*;
 import jodd.bean.BeanUtilBean;
-import org.apache.commons.lang3.ClassUtils;
 import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
@@ -14,7 +13,7 @@ import java.util.List;
  * Postgres Transaction
  */
 public class PostgresTransaction extends AbstractTransaction implements SqlTransaction {
-    private static final org.apache.log4j.Logger logger = Logger.getLogger(PostgresTransaction.class);
+    private static final Logger logger = Logger.getLogger(PostgresTransaction.class);
     private final PostgresProcessor processor;
 
     PostgresTransaction(PostgresProcessor processor) {
