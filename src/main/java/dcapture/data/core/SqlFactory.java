@@ -8,13 +8,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.SQLType;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Sql Factory
@@ -148,7 +146,7 @@ public abstract class SqlFactory implements SqlProcessor {
         sqlColumn.setNullable(toBoolean(obj, "nullable"));
         sqlColumn.setLength(toInt(obj, "length"));
         sqlColumn.setColIndex(toInt(obj, "colIndex"));
-        sqlColumn.setSqlType(toSQLType(toText(obj, "sqlType")));
+        sqlColumn.setSqlType(toSQLType(colType));
         sqlColumn.setTemporalType(toTemporalType(toText(obj, "temporalType")));
         sqlColumn.setEnumType(toBoolean(obj, "enumType"));
         //
@@ -161,15 +159,28 @@ public abstract class SqlFactory implements SqlProcessor {
         return sqlColumn;
     }
 
-    private SQLType toSQLType(String name) {
-        if (name != null && name.trim().isEmpty()) {
-            try {
-                return JDBCType.valueOf(name);
-            } catch (Exception ex) {
-                // ignore exception
-            }
+    private SQLType toSQLType(Class<?> typeClass) {
+        if (String.class.equals(typeClass)) {
+            return JDBCType.VARCHAR;
+        } else if (int.class.equals(typeClass)) {
+            return JDBCType.INTEGER;
+        } else if (BigDecimal.class.equals(typeClass)) {
+            return JDBCType.BIGINT;
+        } else if (boolean.class.equals(typeClass)) {
+            return JDBCType.BOOLEAN;
+        } else if (Date.class.equals(typeClass)) {
+            return JDBCType.DATE;
+        } else if (long.class.equals(typeClass)) {
+            return JDBCType.BIGINT;
+        } else if (double.class.equals(typeClass)) {
+            return JDBCType.DECIMAL;
+        } else if (double.class.equals(typeClass)) {
+            return JDBCType.BIGINT;
+        } else if (Enum.class.isAssignableFrom(typeClass)) {
+            return JDBCType.VARCHAR;
+        } else {
+            throw new IllegalArgumentException("Sql factory have not handle SQL type conversion for " + typeClass);
         }
-        return null;
     }
 
     private TemporalType toTemporalType(String name) {
@@ -284,7 +295,9 @@ public abstract class SqlFactory implements SqlProcessor {
     }
 
     private void copyProperty(Object bean, String name, Object value) {
-        BeanUtil.pojo.setProperty(bean, name, value);
+        if (value != null) {
+            BeanUtil.pojo.setProperty(bean, name, value);
+        }
     }
 
     private SqlTable getValidSqlTable(SqlTableMap tableMap, SqlMetaData[] metaDataArray) {

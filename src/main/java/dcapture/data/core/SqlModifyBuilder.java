@@ -1,5 +1,7 @@
 package dcapture.data.core;
 
+import java.sql.SQLException;
+
 /**
  * Sql Modify Builder
  */
@@ -12,7 +14,9 @@ public interface SqlModifyBuilder {
 
     SqlModifyBuilder update(Class<?> tableClass);
 
-    SqlModifyBuilder updateColumn(String column, Object object);
+    SqlModifyBuilder updateColumn(SqlColumn sqlColumn, Object object);
+
+    SqlModifyBuilder updateColumn(String columnName, Object object) throws SQLException;
 
     SqlModifyBuilder deleteFrom(String tableName);
 
@@ -20,7 +24,7 @@ public interface SqlModifyBuilder {
 
     SqlModifyBuilder insertInto(String tableName);
 
-    SqlModifyBuilder insertColumns(String column, Object object);
+    SqlModifyBuilder insertColumn(SqlColumn sqlColumn, Object object);
 
     SqlModifyBuilder join(String joinQuery);
 

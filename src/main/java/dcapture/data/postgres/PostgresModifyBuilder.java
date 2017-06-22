@@ -2,9 +2,9 @@ package dcapture.data.postgres;
 
 import dcapture.data.core.*;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.sql.SQLException;
+import java.sql.SQLType;
+import java.util.*;
 
 /**
  * H2 Modify Builder
@@ -16,6 +16,7 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
     private WhereQuery whereQuery;
     private List<Object> updateParameters, insertParameters;
     private StringBuilder joinBuilder;
+    private Map<Integer, SQLType> typeIndexMap;
 
     PostgresModifyBuilder(SqlProcessor sqlProcessor) {
         this.sqlProcessor = sqlProcessor;
@@ -27,10 +28,28 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
     }
 
     @Override
-    public PostgresModifyBuilder updateColumn(String column, Object object) {
-        getUpdateColumns().add(column);
+    public PostgresModifyBuilder updateColumn(SqlColumn sqlColumn, Object object) {
+        getUpdateColumns().add(sqlColumn.getName());
+        if (sqlColumn.getJoinTable() != null) {
+            if (1 > ((Integer) object)) {
+                object = null;
+            }
+        }
         getUpdateParameters().add(object);
+        getTypeIndexMap().put(getUpdateParameters().size(), sqlColumn.getSqlType());
         return PostgresModifyBuilder.this;
+    }
+
+    @Override
+    public SqlModifyBuilder updateColumn(String columnName, Object object) throws SQLException {
+        if (columnName.contains(".")) {
+            columnName = columnName.substring(columnName.lastIndexOf("."), columnName.length());
+        }
+        SqlColumn sqlColumn = sqlProcessor.getSqlTableMap().getSqlColumn(updateTable, columnName);
+        if (sqlColumn == null) {
+            throw new SQLException("Update Table : " + updateTable + " > Column not found : " + columnName);
+        }
+        return updateColumn(sqlColumn, object);
     }
 
     @Override
@@ -64,9 +83,15 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
     }
 
     @Override
-    public PostgresModifyBuilder insertColumns(String column, Object object) {
-        getInsertColumns().add(column);
+    public PostgresModifyBuilder insertColumn(SqlColumn sqlColumn, Object object) {
+        getInsertColumns().add(sqlColumn.getName());
+        if (sqlColumn.getJoinTable() != null) {
+            if (1 > ((Integer) object)) {
+                object = null;
+            }
+        }
         getInsertParameters().add(object);
+        getTypeIndexMap().put(getInsertParameters().size(), sqlColumn.getSqlType());
         return PostgresModifyBuilder.this;
     }
 
@@ -93,6 +118,13 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
             sqlQuery = buildDeleteQuery();
         }
         return sqlQuery;
+    }
+
+    private Map<Integer, SQLType> getTypeIndexMap() {
+        if (typeIndexMap == null) {
+            typeIndexMap = new HashMap<>();
+        }
+        return typeIndexMap;
     }
 
     private String buildJoinSQ() {
@@ -130,6 +162,7 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
         sb.append(";");
         SqlQuery sqlQuery = new SqlQuery(sb.toString());
         sqlQuery.setParameterList(parameters);
+        sqlQuery.setTypeIndexMap(getTypeIndexMap());
         return sqlQuery;
     }
 
@@ -148,6 +181,7 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
         sb.append(" values ").append(pss.toString()).append(";");
         SqlQuery sqlQuery = new SqlQuery(sb.toString());
         sqlQuery.setParameterList(parameters);
+        sqlQuery.setTypeIndexMap(getTypeIndexMap());
         return sqlQuery;
     }
 

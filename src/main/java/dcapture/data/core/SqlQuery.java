@@ -1,6 +1,8 @@
 package dcapture.data.core;
 
+import java.sql.SQLType;
 import java.util.LinkedList;
+import java.util.Map;
 
 /**
  * SqlQuery
@@ -8,6 +10,7 @@ import java.util.LinkedList;
 public class SqlQuery {
     private String query;
     private LinkedList<Object> parameterList;
+    private Map<Integer, SQLType> typeIndexMap;
 
     public SqlQuery() {
         this("Database query has not found");
@@ -22,12 +25,20 @@ public class SqlQuery {
         this.query = query;
     }
 
+    public LinkedList<Object> getParameterList() {
+        return parameterList;
+    }
+
     public void setParameterList(LinkedList<Object> parameterList) {
         this.parameterList = parameterList;
     }
 
-    public LinkedList<Object> getParameterList() {
-        return parameterList;
+    public Map<Integer, SQLType> getTypeIndexMap() {
+        return typeIndexMap;
+    }
+
+    public void setTypeIndexMap(Map<Integer, SQLType> typeIndexMap) {
+        this.typeIndexMap = typeIndexMap;
     }
 
     @Override

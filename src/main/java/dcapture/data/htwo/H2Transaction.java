@@ -6,8 +6,10 @@ import org.apache.log4j.Logger;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * H2 Transaction
@@ -59,7 +61,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         logging(sqlQuery);
         try {
             PreparedStatement statement = connection.prepareStatement(sqlQuery.toString());
-            addParameter(statement, sqlQuery.getParameterList());
+            addParameter(statement, sqlQuery);
             statement.addBatch();
             statement.executeBatch();
             connection.commit();
@@ -78,7 +80,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         try {
             connection.setAutoCommit(false);
             PreparedStatement statement = connection.prepareStatement(sqlQuery.toString());
-            addParameter(statement, sqlQuery.getParameterList());
+            addParameter(statement, sqlQuery);
             statement.execute();
             connection.commit();
             close(connection);
@@ -96,7 +98,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         for (SqlColumn sqlColumn : table.getSqlColumnList()) {
             if (!sqlColumn.isPrimaryKey()) {
                 Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
-                builder.insertColumns(sqlColumn.getName(), fieldValue);
+                builder.insertColumn(sqlColumn, fieldValue);
             }
         }
         return builder.getSqlQuery();
@@ -109,7 +111,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         builder.update(table.getName());
         for (SqlColumn sqlColumn : table.getColumnListWithoutPK()) {
             Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
-            builder.updateColumn(sqlColumn.getName(), fieldValue);
+            builder.updateColumn(sqlColumn, fieldValue);
         }
         Object value = BeanUtilBean.pojo.getProperty(object, table.getPrimaryColumn().getFieldName());
         WhereQuery whereQuery = new WhereQuery();
@@ -142,7 +144,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
             PreparedStatement statement = connection.prepareStatement(sqlQuery.toString());
             for (SqlQuery sql : queries) {
                 logging(sql.getParameterList());
-                addParameter(statement, sql.getParameterList());
+                addParameter(statement, sql);
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -163,7 +165,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
             for (SqlQuery sql : queries) {
                 logging(sql);
                 PreparedStatement statement = connection.prepareStatement(sql.toString());
-                addParameter(statement, sql.getParameterList());
+                addParameter(statement, sql);
                 statement.execute();
             }
             connection.commit();
@@ -204,11 +206,22 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         }
     }
 
-    private void addParameter(PreparedStatement statement, List<Object> objects) throws SQLException {
+    private void addParameter(PreparedStatement statement, SqlQuery sqlQuery) throws SQLException {
+        Map<Integer, SQLType> sqlTypeMap = sqlQuery.getTypeIndexMap();
+        if (sqlTypeMap == null) {
+            sqlTypeMap = new HashMap<>();
+        }
         int index = 1;
-        for (Object parameter : objects) {
-            if (parameter == null) {
-                statement.setString(index, null);
+        for (Object parameter : sqlQuery.getParameterList()) {
+            SQLType sqlType = sqlTypeMap.get(index);
+            if (sqlType != null) {
+                if (parameter == null) {
+                    statement.setNull(index, sqlType.getVendorTypeNumber());
+                } else if (parameter instanceof java.util.Date) {
+                    statement.setDate(index, toSqlDate((java.util.Date) parameter));
+                } else {
+                    statement.setObject(index, parameter, sqlType.getVendorTypeNumber());
+                }
             } else if (parameter instanceof String) {
                 statement.setString(index, (String) parameter);
             } else if (parameter instanceof Long) {

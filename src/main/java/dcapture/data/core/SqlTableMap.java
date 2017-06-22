@@ -37,7 +37,21 @@ public class SqlTableMap {
         return classMap.get(tableClass);
     }
 
-    SqlTable getSqlTable(String tableName) {
+    public SqlTable getSqlTable(String tableName) {
         return nameMap.get(tableName.toLowerCase());
+    }
+
+    public SqlColumn getSqlColumn(String tableName, String columnName) {
+        SqlTable sqlTable = getSqlTable(tableName);
+        return sqlTable == null ? null : getSqlColumn(sqlTable, columnName);
+    }
+
+    public SqlColumn getSqlColumn(SqlTable sqlTable, String columnName) {
+        for (SqlColumn column : sqlTable.getSqlColumnList()) {
+            if (columnName.equals(column.getName())) {
+                return column;
+            }
+        }
+        return null;
     }
 }
