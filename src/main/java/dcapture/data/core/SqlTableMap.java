@@ -9,20 +9,15 @@ import java.util.Map;
  */
 public class SqlTableMap {
     private final String schema;
-    private Map<String, SqlTable> nameMap;
+    private Map<String, Class<?>> nameClassMap;
     private Map<Class<?>, SqlTable> classMap;
 
     SqlTableMap(String schema) {
         this.schema = schema;
-        nameMap = new HashMap<>();
     }
 
     void setClassMap(Map<Class<?>, SqlTable> map) {
         this.classMap = map;
-    }
-
-    void setNameMap(Map<String, SqlTable> map) {
-        this.nameMap = map;
     }
 
     public Collection<SqlTable> getSqlTableList() {
@@ -38,7 +33,30 @@ public class SqlTableMap {
     }
 
     public SqlTable getSqlTable(String tableName) {
-        return nameMap.get(tableName.toLowerCase());
+        Class<?> clsName = nameClassMap.get(tableName);
+        return clsName == null ? null : classMap.get(clsName);
+    }
+
+    public SqlTable getSqlTable(String tableName, boolean ignoreCase) {
+        if (nameClassMap == null) {
+            updateNameClassMap();
+        }
+        if (ignoreCase) {
+            for (Map.Entry<String, Class<?>> entry : nameClassMap.entrySet()) {
+                if (tableName.equalsIgnoreCase(entry.getKey())) {
+                    return classMap.get(entry.getValue());
+                }
+            }
+            return null;
+        }
+        return getSqlTable(tableName);
+    }
+
+    private void updateNameClassMap() {
+        nameClassMap = new HashMap<>();
+        for (Class<?> tableClass : classMap.keySet()) {
+            nameClassMap.put(tableClass.getSimpleName(), tableClass);
+        }
     }
 
     public SqlColumn getSqlColumn(String tableName, String columnName) {

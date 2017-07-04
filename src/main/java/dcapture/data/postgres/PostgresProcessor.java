@@ -53,8 +53,9 @@ public final class PostgresProcessor extends SqlFactory {
     @Override
     public SqlColumn getReferenceSqlColumn(Class<?> tableClass, String column) {
         SqlTable sqlTable = getSqlTable(tableClass);
+        column = column.toLowerCase();
         for (SqlColumn sqlColumn : sqlTable.getSqlColumnList()) {
-            if (column.equals(sqlColumn.getName()) || column.equals(sqlColumn.getFieldName())) {
+            if (column.equals(sqlColumn.getName().toLowerCase())) {
                 return sqlColumn;
             }
         }
@@ -111,7 +112,7 @@ public final class PostgresProcessor extends SqlFactory {
         List<SqlColumn> columnList = sqlTable.getColumnListWithoutPK();
         StringBuilder builder = new StringBuilder("create table if not exists ");
         builder.append(getSchema()).append('.').append(table).append("(");
-        builder.append(primaryColumn.getName()).append(" serial primary key, ");
+        builder.append(primaryColumn.getName()).append(getPrimaryType(primaryColumn)).append(" , ");
         for (SqlColumn column : columnList) {
             builder.append(column.getName()).append(" ").append(getDataType(column)).append(", ");
         }
@@ -143,6 +144,15 @@ public final class PostgresProcessor extends SqlFactory {
 
     private int getEnumLength() {
         return 16;
+    }
+
+    private String getPrimaryType(final SqlColumn column) {
+        if (String.class.equals(column.getType())) {
+            return " varchar(" + column.getLength() + ")  primary key ";
+        } else if (int.class.equals(column.getType())) {
+            return " serial primary key ";
+        }
+        return " bigserial primary key ";
     }
 
     private String getDataType(final SqlColumn column) {
@@ -179,6 +189,6 @@ public final class PostgresProcessor extends SqlFactory {
         } else if (Long.class.equals(type)) {
             return "bigint";
         }
-        throw new IllegalArgumentException("Unknown data type " + column.getFieldName());
+        throw new IllegalArgumentException("Unknown data type " + column.getName());
     }
 }

@@ -15,12 +15,12 @@ public class SqlTable {
     private List<Field> fieldList;
     private SqlColumn primaryColumn;
     private List<SqlColumn> sqlColumnList;
-    private Map<String, String> columnFieldMap;
+    private String[] columns;
     private Map<String, Class<?>> enumFieldMap;
     private List<SqlReference> referenceList;
 
-    public SqlTable(String name, Class<?> type) {
-        this.name = name;
+    public SqlTable(Class<?> type) {
+        this.name = type.getSimpleName();
         this.type = type;
     }
 
@@ -32,12 +32,12 @@ public class SqlTable {
         return type;
     }
 
-    public void setFieldList(List<Field> fieldList) {
-        this.fieldList = fieldList;
-    }
-
     public List<Field> getFieldList() {
         return fieldList;
+    }
+
+    public void setFieldList(List<Field> fieldList) {
+        this.fieldList = fieldList;
     }
 
     public List<SqlColumn> getSqlColumnList() {
@@ -68,14 +68,15 @@ public class SqlTable {
         return primaryColumn;
     }
 
-    public Map<String, String> getColumnFieldMap() {
-        if (columnFieldMap == null) {
-            columnFieldMap = new HashMap<>();
-            for (SqlColumn column : getSqlColumnList()) {
-                columnFieldMap.put(column.getName(), column.getFieldName());
+    /*Need to be improve performance */
+    public SqlColumn getSqlColumn(String name) {
+        name = name.toLowerCase();
+        for (SqlColumn column : getSqlColumnList()) {
+            if(name.equals(column.getName().toLowerCase())) {
+                return column;
             }
         }
-        return columnFieldMap;
+        return null;
     }
 
     Class<?> getEnumClass(String fieldName) {
@@ -83,7 +84,7 @@ public class SqlTable {
             enumFieldMap = new HashMap<>();
             for (SqlColumn column : getSqlColumnList()) {
                 if (column.isEnumType()) {
-                    enumFieldMap.put(column.getFieldName(), column.getType());
+                    enumFieldMap.put(column.getName(), column.getType());
                 }
             }
         }
@@ -95,6 +96,14 @@ public class SqlTable {
         columnList.addAll(getSqlColumnList());
         columnList.remove(getPrimaryColumn());
         return columnList;
+    }
+
+    public String[] getColumns() {
+        return columns;
+    }
+
+    public void setColumns(String[] columns) {
+        this.columns = columns;
     }
 
     @Override

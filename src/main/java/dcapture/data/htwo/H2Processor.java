@@ -52,8 +52,9 @@ public final class H2Processor extends SqlFactory {
     @Override
     public SqlColumn getReferenceSqlColumn(Class<?> tableClass, String column) {
         SqlTable sqlTable = getSqlTable(tableClass);
+        column = column.toLowerCase();
         for (SqlColumn sqlColumn : sqlTable.getSqlColumnList()) {
-            if (column.equals(sqlColumn.getName()) || column.equals(sqlColumn.getFieldName())) {
+            if (column.equals(sqlColumn.getName().toLowerCase())) {
                 return sqlColumn;
             }
         }
@@ -181,6 +182,6 @@ public final class H2Processor extends SqlFactory {
         } else if (Long.class.equals(type)) {
             return "bigint";
         }
-        throw new IllegalArgumentException("Unknown data type " + column.getFieldName());
+        throw new IllegalArgumentException("Unknown data type " + column.getName());
     }
 }

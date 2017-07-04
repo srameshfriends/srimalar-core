@@ -5,7 +5,6 @@ import dcapture.data.core.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * H2 Select Builder
@@ -32,8 +31,7 @@ public class PostgresSelectBuilder implements SqlSelectBuilder {
     public SqlSelectBuilder selectAll(Class<?> tableClass) {
         SqlTable sqlTable = sqlProcessor.getSqlTable(tableClass);
         selectFrom(sqlTable.getName());
-        Set<String> columnSet = sqlTable.getColumnFieldMap().keySet();
-        selectColumns(columnSet.toArray(new String[]{}));
+        selectColumns(sqlTable.getColumns());
         return PostgresSelectBuilder.this;
     }
 

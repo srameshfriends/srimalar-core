@@ -97,7 +97,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         builder.insertInto(table.getName());
         for (SqlColumn sqlColumn : table.getSqlColumnList()) {
             if (!sqlColumn.isPrimaryKey()) {
-                Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
+                Object fieldValue = getFieldObject(object, sqlColumn.getName());
                 builder.insertColumn(sqlColumn, fieldValue);
             }
         }
@@ -110,10 +110,10 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
         builder.update(table.getName());
         for (SqlColumn sqlColumn : table.getColumnListWithoutPK()) {
-            Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
+            Object fieldValue = getFieldObject(object, sqlColumn.getName());
             builder.updateColumn(sqlColumn, fieldValue);
         }
-        Object value = BeanUtilBean.pojo.getProperty(object, table.getPrimaryColumn().getFieldName());
+        Object value = BeanUtilBean.pojo.getProperty(object, table.getPrimaryColumn().getName());
         WhereQuery whereQuery = new WhereQuery();
         whereQuery.where(table.getPrimaryColumn().getName(), value);
         builder.where(whereQuery);
@@ -126,7 +126,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
         builder.deleteFrom(table.getName());
         SqlColumn sqlColumn = table.getPrimaryColumn();
-        Object fieldValue = getFieldObject(object, sqlColumn.getFieldName());
+        Object fieldValue = getFieldObject(object, sqlColumn.getName());
         WhereQuery whereQuery = new WhereQuery();
         whereQuery.where(sqlColumn.getName(), fieldValue);
         builder.where(whereQuery);

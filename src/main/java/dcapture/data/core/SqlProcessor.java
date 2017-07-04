@@ -10,7 +10,7 @@ public interface SqlProcessor {
 
     String getSchema();
 
-    void runForwardTool() throws SQLException;
+    void runForwardTool(boolean addForeignKey) throws SQLException;
 
     SqlSelectBuilder createSqlSelectBuilder();
 

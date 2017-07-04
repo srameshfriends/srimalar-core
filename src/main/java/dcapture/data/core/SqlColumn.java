@@ -8,7 +8,6 @@ import java.sql.SQLType;
  */
 public class SqlColumn {
     private final String name;
-    private String fieldName;
     private final Class<?> type;
     private boolean primaryKey, autoIncrement, nullable, enumType;
     private int length;
@@ -17,18 +16,10 @@ public class SqlColumn {
     private int colIndex;
     private SQLType sqlType;
 
-    public SqlColumn(String name, Class<?> type) {
-        this.name = name;
+    public SqlColumn(String fieldName, Class<?> type) {
+        this.name = fieldName;
         this.type = type;
         nullable = true;
-    }
-
-    public String getFieldName() {
-        return fieldName;
-    }
-
-    public void setFieldName(String fieldName) {
-        this.fieldName = fieldName;
     }
 
     public boolean isEnumType() {
@@ -39,24 +30,12 @@ public class SqlColumn {
         this.enumType = enumType;
     }
 
-    public void setJoinTable(SqlTable joinTable) {
-        this.joinTable = joinTable;
-    }
-
     public SqlTable getJoinTable() {
         return joinTable;
     }
 
-    public void setPrimaryKey(boolean primaryKey) {
-        this.primaryKey = primaryKey;
-    }
-
-    public void setAutoIncrement(boolean autoIncrement) {
-        this.autoIncrement = autoIncrement;
-    }
-
-    public void setLength(int length) {
-        this.length = length;
+    public void setJoinTable(SqlTable joinTable) {
+        this.joinTable = joinTable;
     }
 
     public boolean isNullable() {
@@ -79,12 +58,24 @@ public class SqlColumn {
         return autoIncrement;
     }
 
+    public void setAutoIncrement(boolean autoIncrement) {
+        this.autoIncrement = autoIncrement;
+    }
+
     public boolean isPrimaryKey() {
         return primaryKey;
     }
 
+    public void setPrimaryKey(boolean primaryKey) {
+        this.primaryKey = primaryKey;
+    }
+
     public int getLength() {
         return length;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
     }
 
     public TemporalType getTemporalType() {
@@ -113,6 +104,6 @@ public class SqlColumn {
 
     @Override
     public String toString() {
-        return name + " \t " + type.getName();
+        return name;
     }
 }

@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -258,8 +257,7 @@ public class PostgresReader implements SqlReader {
         SqlTable sqlTable = getProcessor().getSqlTable(tableClass);
         H2SelectBuilder builder = new H2SelectBuilder(getProcessor());
         builder.selectFrom(sqlTable.getName());
-        Set<String> columnSet = sqlTable.getColumnFieldMap().keySet();
-        builder.selectColumns(columnSet.toArray(new String[columnSet.size()]));
+        builder.selectColumns(sqlTable.getColumns());
         return builder;
     }
 

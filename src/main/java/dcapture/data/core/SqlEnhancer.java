@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
  */
 public class SqlEnhancer {
     private static final Logger logger = Logger.getLogger(SqlEnhancer.class.getName());
+    private static final int DEFAULT_VARCHAR_LENGTH = 512;
 
     public void write(File persistenceFile, String... packageArray) throws Exception {
         logger.info("Entity configuration writing..,");
@@ -54,12 +56,8 @@ public class SqlEnhancer {
 
     private void addTableColumns(Map<Class<?>, SqlTable> tableClassMap) {
         for (Class<?> entity : tableClassMap.keySet()) {
-            String tableName = findTableName(entity);
-            if (tableName == null) {
-                continue;
-            }
             List<Field> fieldList = new ArrayList<>();
-            SqlTable sqlTable = new SqlTable(tableName, entity);
+            SqlTable sqlTable = new SqlTable(entity);
             sqlTable.setFieldList(fieldList);
             addFields(fieldList, entity);
             tableClassMap.put(sqlTable.getType(), sqlTable);
@@ -115,7 +113,7 @@ public class SqlEnhancer {
         List<SqlColumn> unOrderList = new ArrayList<>();
         for (String column : columnList) {
             for (SqlColumn sqlColumn : sqlTable.getSqlColumnList()) {
-                if (column.equals(sqlColumn.getFieldName())) {
+                if (column.equals(sqlColumn.getName())) {
                     orderList.add(sqlColumn);
                     break;
                 }
@@ -132,7 +130,6 @@ public class SqlEnhancer {
 
     private JsonObject toJsonObject(SqlTable sqlTable) {
         JsonObject obj = new JsonObject();
-        obj.addProperty("name", sqlTable.getName());
         obj.addProperty("type", sqlTable.getType().getName());
         //
         SqlColumn priCol = sqlTable.getPrimaryColumn();
@@ -158,7 +155,6 @@ public class SqlEnhancer {
 
     private JsonObject toJsonObject(SqlColumn sqlColumn) {
         JsonObject obj = new JsonObject();
-        obj.addProperty("fieldName", sqlColumn.getFieldName());
         obj.addProperty("name", sqlColumn.getName());
         obj.addProperty("type", sqlColumn.getType().getName());
         obj.addProperty("primaryKey", sqlColumn.isPrimaryKey());
@@ -202,25 +198,24 @@ public class SqlEnhancer {
         SqlColumn sqlColumn = ref.getSqlColumn();
         JsonObject jsonSqlCol = new JsonObject();
         jsonSqlCol.addProperty("name", sqlColumn.getName());
-        jsonSqlCol.addProperty("fieldName", sqlColumn.getFieldName());
         jsonSqlCol.addProperty("type", sqlColumn.getType().getName());
         result.add("sqlColumn", jsonSqlCol);
         //
         SqlColumn refColumn = ref.getReferenceColumn();
         JsonObject jsonRefCol = new JsonObject();
         jsonRefCol.addProperty("name", refColumn.getName());
-        jsonRefCol.addProperty("fieldName", refColumn.getFieldName());
         jsonRefCol.addProperty("type", refColumn.getType().getName());
         result.add("referenceColumn", jsonRefCol);
         return result;
     }
 
-    private SqlTable findJoinTable(String tableName, Collection<SqlTable> tableList) {
+    private SqlTable findJoinTableIgnoreCase(String tableName, Collection<SqlTable> tableList) {
         if (tableName == null) {
             return null;
         }
+        tableName = tableName.toLowerCase();
         for (SqlTable table : tableList) {
-            if (tableName.equals(table.getName())) {
+            if (tableName.equals(table.getName().toLowerCase())) {
                 return table;
             }
         }
@@ -231,34 +226,39 @@ public class SqlEnhancer {
         for (Field field : sqlTable.getFieldList()) {
             JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
             if (joinColumn != null) {
-                SqlTable joinTable = findJoinTable(joinColumn.table(), tableList);
+                SqlTable joinTable = findJoinTableIgnoreCase(joinColumn.table(), tableList);
                 if (joinTable == null) {
                     String err = sqlTable.getType() + " join column table name missing " + field.getName();
                     throw new NullPointerException(err);
                 }
-                SqlColumn sqlColumn = createJoinColumn(field, joinColumn);
-                sqlColumn.setJoinTable(joinTable);
-                sqlColumn.setLength(joinTable.getPrimaryColumn().getLength());
-                sqlTable.getSqlColumnList().add(sqlColumn);
+                SqlColumn sqlColumn = findSqlColumn(sqlTable, field);
+                if (sqlColumn != null) {
+                    sqlColumn.setJoinTable(joinTable);
+                    sqlColumn.setLength(joinTable.getPrimaryColumn().getLength());
+                }
             }
         }
     }
 
-    private SqlColumn createJoinColumn(Field field, JoinColumn joinColumn) {
-        final String name = joinColumn.name().length() != 0 ? joinColumn.name() : field.getName();
-        SqlColumn sqlColumn = new SqlColumn(name, field.getType());
-        sqlColumn.setFieldName(field.getName());
-        sqlColumn.setNullable(joinColumn.nullable());
-        return sqlColumn;
+    private SqlColumn findSqlColumn(SqlTable sqlTable, Field field) {
+        final String fieldName = field.getName();
+        for (SqlColumn sqlColumn : sqlTable.getSqlColumnList()) {
+            if (fieldName.equals(sqlColumn.getName())) {
+                return sqlColumn;
+            }
+        }
+        return null;
     }
 
     private SqlColumn createColumn(Field field, Column column) {
-        final String name = column.name().length() != 0 ? column.name() : field.getName();
-        SqlColumn sqlColumn = new SqlColumn(name, field.getType());
-        sqlColumn.setFieldName(field.getName());
-        sqlColumn.setNullable(column.nullable());
-        sqlColumn.setLength(column.length());
-        if (Date.class.equals(sqlColumn.getType())) {
+        SqlColumn sqlColumn = new SqlColumn(field.getName(), field.getType());
+        if (column != null) {
+            sqlColumn.setNullable(column.nullable());
+            sqlColumn.setLength(column.length());
+        }
+        if (String.class.equals(sqlColumn.getType()) && 1 > sqlColumn.getLength()) {
+            sqlColumn.setLength(DEFAULT_VARCHAR_LENGTH);
+        } else if (Date.class.equals(sqlColumn.getType())) {
             Temporal temporal = field.getAnnotation(Temporal.class);
             sqlColumn.setTemporalType(temporal == null ? null : temporal.value());
         }
@@ -270,10 +270,10 @@ public class SqlEnhancer {
         sqlTable.setSqlColumnList(columnList);
         for (Field field : sqlTable.getFieldList()) {
             Column column = field.getAnnotation(Column.class);
-            SqlColumn sqlColumn = null;
-            if (column != null) {
-                sqlColumn = createColumn(field, column);
+            if (Modifier.isStatic(field.getModifiers())) {
+                continue;
             }
+            SqlColumn sqlColumn = createColumn(field, column);
             Id primaryId = field.getAnnotation(Id.class);
             if (primaryId != null) {
                 if (sqlColumn == null) {
@@ -284,9 +284,6 @@ public class SqlEnhancer {
                 if (generatedValue != null) {
                     sqlColumn.setAutoIncrement(true);
                 }
-            }
-            if (sqlColumn == null) {
-                continue;
             }
             sqlColumn.setEnumType(sqlColumn.getType().isEnum());
             columnList.add(sqlColumn);
@@ -305,13 +302,13 @@ public class SqlEnhancer {
         }
     }
 
-    private String findTableName(Class<?> clazz) {
+    /*private String findTableName(Class<?> clazz) {
         if (clazz == null) {
             return null;
         }
         Table table = clazz.getAnnotation(Table.class);
         return table == null ? null : table.name();
-    }
+    }*/
 
     private void findSuperClass(Class<?> cls, List<Class<?>> classList) {
         Class<?> parentClass = cls.getSuperclass();

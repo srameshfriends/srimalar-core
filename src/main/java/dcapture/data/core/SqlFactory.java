@@ -31,17 +31,15 @@ public abstract class SqlFactory implements SqlProcessor {
     }
 
     @Override
-    public void runForwardTool() {
+    public void runForwardTool(boolean addForeignKey) throws SQLException {
         List<SqlQuery> queryList = new ArrayList<>();
         queryList.add(createSchemaQuery());
         queryList.addAll(createTableQueries());
-        queryList.addAll(alterTableQueries());
-        try {
-            SqlTransaction transaction = getSqlTransaction();
-            transaction.executeCommit(queryList);
-        } catch (SQLException ex) {
-            ex.printStackTrace();
+        if (addForeignKey) {
+            queryList.addAll(alterTableQueries());
         }
+        SqlTransaction transaction = getSqlTransaction();
+        transaction.executeCommit(queryList);
     }
 
     protected void initialize(String schema, File persistenceFile) {
@@ -50,24 +48,19 @@ public abstract class SqlFactory implements SqlProcessor {
             if (jsonArray == null) {
                 throw new NullPointerException("Persistence file parsing error : " + persistenceFile);
             }
-            Map<String, SqlTable> nameMap = new HashMap<>();
+            Map<Class<?>, SqlTable> classMap = new HashMap<>();
             for (JsonElement ele : jsonArray) {
                 SqlTable sqlTable = toSqlTable(ele);
-                nameMap.put(sqlTable.getName(), sqlTable);
+                classMap.put(sqlTable.getType(), sqlTable);
             }
-            for (SqlTable sqlTable : nameMap.values()) {
-                updateSqlJoinTable(sqlTable, nameMap);
+            for (SqlTable sqlTable : classMap.values()) {
+                updateSqlJoinTable(sqlTable, classMap);
             }
             for (JsonElement ele : jsonArray) {
-                updateSqlReference(ele, nameMap);
-            }
-            Map<Class<?>, SqlTable> classMap = new HashMap<>();
-            for (SqlTable sqlTable : nameMap.values()) {
-                classMap.put(sqlTable.getType(), sqlTable);
+                updateSqlReference(ele, classMap);
             }
             sqlTableMap = new SqlTableMap(schema);
             sqlTableMap.setClassMap(classMap);
-            sqlTableMap.setNameMap(nameMap);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -84,6 +77,16 @@ public abstract class SqlFactory implements SqlProcessor {
             // ignore exception
         }
         return cls;
+    }
+
+    private Class<?> toClassTable(JsonObject obj) {
+        try {
+            String clsName = toTextNullSafe(obj, "type");
+            return clsName == null ? null : Class.forName(clsName);
+        } catch (Exception ex) {
+            // ignore exception
+        }
+        return null;
     }
 
     private Class<?> getPrimitive(String text) {
@@ -109,38 +112,42 @@ public abstract class SqlFactory implements SqlProcessor {
 
     private SqlTable toSqlTable(JsonElement ele) {
         JsonObject obj = ele.getAsJsonObject();
-        String textValue = toText(obj, "name");
-        Class<?> tblCls = toClass(toText(obj, "type"));
+        Class<?> tblCls = toClassTable(obj);
+        if (tblCls == null) {
+            throw new NullPointerException("sql table type should not be empty " + ele.toString());
+        }
         JsonArray jsonSqlColList = toJsonArray(obj, "sqlColumnList");
         if (jsonSqlColList == null) {
             throw new NullPointerException("sql column should not be null");
         }
-        SqlTable result = new SqlTable(textValue, tblCls);
+        SqlTable result = new SqlTable(tblCls);
         List<SqlColumn> columnList = new ArrayList<>();
+        List<String> columns = new ArrayList<>();
         for (JsonElement colEle : jsonSqlColList) {
             SqlColumn sqlColumn = toSqlColumn(colEle);
             columnList.add(sqlColumn);
+            columns.add(sqlColumn.getName());
         }
         result.setSqlColumnList(columnList);
+        result.setColumns(columns.toArray(new String[columns.size()]));
         result.getPrimaryColumn();
         return result;
     }
 
-    private void updateSqlJoinTable(SqlTable table, Map<String, SqlTable> nameMap) {
+    private void updateSqlJoinTable(SqlTable table, Map<Class<?>, SqlTable> nameMap) {
         for (SqlColumn sqlColumn : table.getSqlColumnList()) {
             if (sqlColumn.getJoinTable() != null) {
                 SqlTable joinTable = sqlColumn.getJoinTable();
-                sqlColumn.setJoinTable(nameMap.get(joinTable.getName()));
+                sqlColumn.setJoinTable(nameMap.get(joinTable.getType()));
             }
         }
     }
 
     private SqlColumn toSqlColumn(JsonElement element) {
         JsonObject obj = element.getAsJsonObject();
-        String name = toText(obj, "name");
+        String fieldName = toText(obj, "name");
         Class<?> colType = toClass(toText(obj, "type"));
-        SqlColumn sqlColumn = new SqlColumn(name, colType);
-        sqlColumn.setFieldName(toText(obj, "fieldName"));
+        SqlColumn sqlColumn = new SqlColumn(fieldName, colType);
         sqlColumn.setPrimaryKey(toBoolean(obj, "primaryKey"));
         sqlColumn.setAutoIncrement(toBoolean(obj, "autoIncrement"));
         sqlColumn.setNullable(toBoolean(obj, "nullable"));
@@ -152,9 +159,8 @@ public abstract class SqlFactory implements SqlProcessor {
         //
         JsonObject jsonJoinTbl = toJsonObject(obj, "joinTable");
         if (jsonJoinTbl != null) {
-            name = toText(jsonJoinTbl, "name");
             colType = toClass(toText(jsonJoinTbl, "type"));
-            sqlColumn.setJoinTable(new SqlTable(name, colType));
+            sqlColumn.setJoinTable(new SqlTable(colType));
         }
         return sqlColumn;
     }
@@ -194,13 +200,17 @@ public abstract class SqlFactory implements SqlProcessor {
         return null;
     }
 
-    private void updateSqlReference(JsonElement ele, Map<String, SqlTable> tableMap) {
+    private void updateSqlReference(JsonElement ele, Map<Class<?>, SqlTable> tableMap) {
         JsonObject obj = ele.getAsJsonObject();
         JsonArray jsonRefList = toJsonArray(obj, "referenceList");
         if (jsonRefList == null) {
             return;
         }
-        SqlTable updateSqlTable = tableMap.get(toText(obj, "name"));
+        Class<?> tblCls = toClassTable(obj);
+        if (tblCls == null) {
+            throw new NullPointerException("sql reference table type should not be empty " + ele.toString());
+        }
+        SqlTable updateSqlTable = tableMap.get(tblCls);
         List<SqlReference> referenceList = new ArrayList<>();
         updateSqlTable.setReferenceList(referenceList);
         for (JsonElement colEle : jsonRefList) {
@@ -210,10 +220,10 @@ public abstract class SqlFactory implements SqlProcessor {
             JsonObject jSqlCol = toJsonObject(root, "sqlColumn");
             JsonObject jRefCol = toJsonObject(root, "referenceColumn");
             //
-            String txtSqlTbl = toText(jSqlTbl, "name");
-            String txtRefTbl = toText(jRefTbl, "name");
-            String txtSqlCol = toText(jSqlCol, "name");
-            String txtRefCol = toText(jRefCol, "name");
+            Class<?> txtSqlTbl = toClassTable(jSqlTbl);
+            Class<?> txtRefTbl = toClassTable(jRefTbl);
+            String txtSqlCol = toTextNullSafe(jSqlCol, "name");
+            String txtRefCol = toTextNullSafe(jRefCol, "name");
             //
             SqlReference reference = new SqlReference();
             SqlTable sqlTable = tableMap.get(txtSqlTbl);
@@ -240,21 +250,21 @@ public abstract class SqlFactory implements SqlProcessor {
     @SuppressWarnings("unchecked")
     public <T> List<T> toEntityList(SqlMetaDataResult dataResult) {
         SqlTable table = getValidSqlTable(getSqlTableMap(), dataResult.getMetaData());
-        if (table == null) {
+      /*  if (table == null) {
             return new ArrayList<>();
-        }
+        }*/
         List<T> resultList = new ArrayList<>();
         for (Object[] data : dataResult.getObjectsList()) {
             T result = (T) instance(table.getType());
             int index = 0;
             for (Object value : data) {
                 String columnName = dataResult.getMetaData()[index].getColumnName();
-                String fieldName = table.getColumnFieldMap().get(columnName);
-                Class<?> enumClass = table.getEnumClass(fieldName);
+                SqlColumn sqlColumn = table.getSqlColumn(columnName);
+                Class<?> enumClass = table.getEnumClass(sqlColumn.getName());
                 if (enumClass != null) {
                     value = parseEnum(enumClass, (String) value);
                 }
-                copyProperty(result, fieldName, value);
+                copyProperty(result, sqlColumn, value);
                 index += 1;
             }
             resultList.add(result);
@@ -266,9 +276,6 @@ public abstract class SqlFactory implements SqlProcessor {
     @SuppressWarnings("unchecked")
     public <T> T toEntity(SqlMetaDataResult dataResult) {
         SqlTable table = getValidSqlTable(getSqlTableMap(), dataResult.getMetaData());
-        if (table == null) {
-            return null;
-        }
         if (dataResult.getObjectsList().isEmpty()) {
             return null;
         }
@@ -277,12 +284,12 @@ public abstract class SqlFactory implements SqlProcessor {
         int index = 0;
         for (Object value : data) {
             String columnName = dataResult.getMetaData()[index].getColumnName();
-            String fieldName = table.getColumnFieldMap().get(columnName);
-            Class<?> enumClass = table.getEnumClass(fieldName);
+            SqlColumn sqlColumn = table.getSqlColumn(columnName);
+            Class<?> enumClass = table.getEnumClass(sqlColumn.getName());
             if (enumClass != null) {
                 value = parseEnum(enumClass, (String) value);
             }
-            copyProperty(result, fieldName, value);
+            copyProperty(result, sqlColumn, value);
             index += 1;
         }
         return result;
@@ -294,22 +301,14 @@ public abstract class SqlFactory implements SqlProcessor {
         return table.getReferenceList();
     }
 
-    private void copyProperty(Object bean, String name, Object value) {
+    private void copyProperty(Object bean, SqlColumn sqlColumn, Object value) {
         if (value != null) {
-            BeanUtil.pojo.setProperty(bean, name, value);
+            BeanUtil.pojo.setProperty(bean, sqlColumn.getName(), value);
         }
     }
 
     private SqlTable getValidSqlTable(SqlTableMap tableMap, SqlMetaData[] metaDataArray) {
-        SqlTable table = tableMap.getSqlTable(metaDataArray[0].getTableName());
-        if (table != null) {
-            for (SqlMetaData metaData : metaDataArray) {
-                if (!metaData.getTableName().equals(table.getName())) {
-                    return null;
-                }
-            }
-        }
-        return table;
+        return tableMap.getSqlTable(metaDataArray[0].getTableName(), true);
     }
 
     private Object instance(Class<?> ins) {
@@ -360,6 +359,11 @@ public abstract class SqlFactory implements SqlProcessor {
     private String toText(JsonObject obj, String name) {
         JsonPrimitive primitive = toJsonPrimitive(obj, name);
         return primitive == null ? null : primitive.getAsString().trim();
+    }
+
+    private String toTextNullSafe(JsonObject obj, String name) {
+        JsonPrimitive primitive = toJsonPrimitive(obj, name);
+        return primitive == null ? "" : primitive.getAsString().trim();
     }
 
     String toText(JsonPrimitive primitive) {
