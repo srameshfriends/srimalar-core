@@ -106,7 +106,7 @@ public final class H2Processor extends SqlFactory {
     private String createTableQuery(SqlTable sqlTable) {
         String table = sqlTable.getName();
         SqlColumn primaryColumn = sqlTable.getPrimaryColumn();
-        List<SqlColumn> columnList = sqlTable.getColumnListWithoutPK();
+        List<SqlColumn> columnList = transaction.getColumnListWithoutPK(sqlTable);
         StringBuilder builder = new StringBuilder("create table if not exists ");
         builder.append(getSchema()).append('.').append(table).append("(");
         builder.append(primaryColumn.getName()).append(" ").append(getDataType(primaryColumn))

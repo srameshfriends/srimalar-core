@@ -109,7 +109,7 @@ public class H2Transaction extends AbstractTransaction implements SqlTransaction
         SqlTable table = getProcessor().getSqlTable(object.getClass());
         H2ModifyBuilder builder = new H2ModifyBuilder(getProcessor());
         builder.update(table.getName());
-        for (SqlColumn sqlColumn : table.getColumnListWithoutPK()) {
+        for (SqlColumn sqlColumn : getColumnListWithoutPK(table)) {
             Object fieldValue = getFieldObject(object, sqlColumn.getName());
             builder.updateColumn(sqlColumn, fieldValue);
         }

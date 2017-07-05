@@ -27,14 +27,10 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
         return sqlProcessor.getSchema();
     }
 
+    /** Join table validation is to be corrected*/
     @Override
     public PostgresModifyBuilder updateColumn(SqlColumn sqlColumn, Object object) {
         getUpdateColumns().add(sqlColumn.getName());
-        if (sqlColumn.getJoinTable() != null) {
-            if (1 > ((Integer) object)) {
-                object = null;
-            }
-        }
         getUpdateParameters().add(object);
         getTypeIndexMap().put(getUpdateParameters().size(), sqlColumn.getSqlType());
         return PostgresModifyBuilder.this;
@@ -82,14 +78,10 @@ public class PostgresModifyBuilder implements SqlModifyBuilder {
         return PostgresModifyBuilder.this;
     }
 
+    /** table reference not validated - need to be validate before insert */
     @Override
     public PostgresModifyBuilder insertColumn(SqlColumn sqlColumn, Object object) {
         getInsertColumns().add(sqlColumn.getName());
-        if (sqlColumn.getJoinTable() != null) {
-            if (1 > ((Integer) object)) {
-                object = null;
-            }
-        }
         getInsertParameters().add(object);
         getTypeIndexMap().put(getInsertParameters().size(), sqlColumn.getSqlType());
         return PostgresModifyBuilder.this;

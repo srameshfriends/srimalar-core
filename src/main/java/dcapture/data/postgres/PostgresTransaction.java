@@ -107,7 +107,7 @@ public class PostgresTransaction extends AbstractTransaction implements SqlTrans
         SqlTable table = getProcessor().getSqlTable(object.getClass());
         PostgresModifyBuilder builder = new PostgresModifyBuilder(getProcessor());
         builder.update(table.getName());
-        for (SqlColumn sqlColumn : table.getColumnListWithoutPK()) {
+        for (SqlColumn sqlColumn : getColumnListWithoutPK(table)) {
             Object fieldValue = getFieldObject(object, sqlColumn.getName());
             builder.updateColumn(sqlColumn, fieldValue);
         }

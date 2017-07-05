@@ -1,7 +1,6 @@
 package dcapture.data.core;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,13 +88,6 @@ public class SqlTable {
             }
         }
         return enumFieldMap.get(fieldName);
-    }
-
-    public List<SqlColumn> getColumnListWithoutPK() {
-        List<SqlColumn> columnList = new ArrayList<>();
-        columnList.addAll(getSqlColumnList());
-        columnList.remove(getPrimaryColumn());
-        return columnList;
     }
 
     public String[] getColumns() {
