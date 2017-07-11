@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.SQLType;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -174,8 +176,10 @@ public abstract class SqlFactory implements SqlProcessor {
             return JDBCType.BIGINT;
         } else if (boolean.class.equals(typeClass)) {
             return JDBCType.BOOLEAN;
-        } else if (Date.class.equals(typeClass)) {
+        } else if (LocalDate.class.equals(typeClass) || Date.class.equals(typeClass)) {
             return JDBCType.DATE;
+        } else if (LocalDateTime.class.equals(typeClass)) {
+            return JDBCType.TIMESTAMP;
         } else if (long.class.equals(typeClass)) {
             return JDBCType.BIGINT;
         } else if (double.class.equals(typeClass)) {

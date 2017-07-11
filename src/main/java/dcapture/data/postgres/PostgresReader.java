@@ -1,7 +1,6 @@
 package dcapture.data.postgres;
 
 import dcapture.data.core.*;
-import dcapture.data.htwo.H2SelectBuilder;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.log4j.Logger;
 
@@ -238,7 +237,7 @@ public class PostgresReader implements SqlReader {
         }
         SqlReference result = null;
         for (SqlReference reference : referenceList) {
-            H2SelectBuilder builder = new H2SelectBuilder(getProcessor());
+            PostgresSelectBuilder builder = new PostgresSelectBuilder(getProcessor());
             builder.selectAll(reference.getReferenceTable().getType()).where(
                     reference.getReferenceColumn().getName(), id);
             SqlMetaDataResult metaDataResult = sqlMetaDataResult(builder.getSelectQuery());
@@ -255,7 +254,7 @@ public class PostgresReader implements SqlReader {
     @Override
     public SqlSelectBuilder selectAll(Class<?> tableClass) {
         SqlTable sqlTable = getProcessor().getSqlTable(tableClass);
-        H2SelectBuilder builder = new H2SelectBuilder(getProcessor());
+        PostgresSelectBuilder builder = new PostgresSelectBuilder(getProcessor());
         builder.selectFrom(sqlTable.getName());
         builder.selectColumns(sqlTable.getColumns());
         return builder;
@@ -264,7 +263,7 @@ public class PostgresReader implements SqlReader {
     @Override
     public SqlSelectBuilder selectFrom(Class<?> tableClass) {
         SqlTable sqlTable = getProcessor().getSqlTable(tableClass);
-        H2SelectBuilder builder = new H2SelectBuilder(getProcessor());
+        PostgresSelectBuilder builder = new PostgresSelectBuilder(getProcessor());
         builder.selectFrom(sqlTable.getName());
         return builder;
     }

@@ -7,6 +7,8 @@ import javax.persistence.TemporalType;
 import java.io.File;
 import java.math.BigDecimal;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -152,11 +154,10 @@ public final class H2Processor extends SqlFactory {
                 return "text".concat(suffix);
             }
             return "varchar(" + column.getLength() + ")" + suffix;
-        } else if (Date.class.equals(type)) {
-            if (column.getTemporalType() != null && TemporalType.TIMESTAMP.equals(column.getTemporalType())) {
-                return "timestamp";
-            }
+        } else if (LocalDate.class.equals(type)) {
             return "date";
+        } else if (LocalDateTime.class.equals(type)) {
+            return "timestamp";
         } else if (BigDecimal.class.equals(type)) {
             return "decimal";
         } else if (int.class.equals(type)) {
@@ -181,6 +182,11 @@ public final class H2Processor extends SqlFactory {
             return "double";
         } else if (Long.class.equals(type)) {
             return "bigint";
+        } else if (Date.class.equals(type)) {
+            if (column.getTemporalType() != null && TemporalType.TIMESTAMP.equals(column.getTemporalType())) {
+                return "timestamp";
+            }
+            return "date";
         }
         throw new IllegalArgumentException("Unknown data type " + column.getName());
     }
