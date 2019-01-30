@@ -1,8 +1,14 @@
-function onPageLoaded() {
+function loadPage(url) {
+    $("#page-main").load(url, function(responseTxt, statusTxt, xhr){
+    	 if(statusTxt == "error") {
+	        alert("Error: " + url + " \n " + xhr.status + ": " + xhr.statusText);
+	     }
+    });
+}
+function onPageInit() {
     $('.nav-link').unbind().click(function(evt){
-        var url = $(evt.currentTarget).data("url");
-        $("#page-main").load(url);
-        $('.navbar-collapse').collapse('hide');
+	$('.navbar-collapse').collapse('hide');
+        loadPage($(evt.currentTarget).data("url"));
         return false;
     });
 }
